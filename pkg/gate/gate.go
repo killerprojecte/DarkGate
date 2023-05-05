@@ -23,6 +23,8 @@ import (
 	errors "go.minekube.com/gate/pkg/util/errs"
 )
 
+var Igate = &Gate{}
+
 // Options are Gate options.
 type Options struct {
 	// Config requires a valid Gate configuration.
@@ -191,6 +193,7 @@ func WithAutoShutdownOnSignal(enabled bool) StartOption {
 //
 // Config validation warnings are logged but ignored.
 func Start(ctx context.Context, opts ...StartOption) error {
+	Igate = nil
 	c := &startOptions{
 		autoShutdownOnSignal: true,
 	}
@@ -246,6 +249,7 @@ func Start(ctx context.Context, opts ...StartOption) error {
 		}()
 	}
 
+	Igate = gate
 	// Start everything
 	return gate.Start(ctx)
 }

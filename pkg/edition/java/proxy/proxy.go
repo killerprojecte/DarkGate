@@ -341,6 +341,10 @@ func (p *Proxy) Config() config.Config {
 	return *p.cfg
 }
 
+func (p *Proxy) SetConfig(newConfig config.Config) {
+	p.cfg = &newConfig
+}
+
 func (p *Proxy) config() *config.Config {
 	return p.cfg
 }

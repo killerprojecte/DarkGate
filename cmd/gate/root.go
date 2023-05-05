@@ -3,10 +3,6 @@ package gate
 import (
 	"errors"
 	"fmt"
-	"math"
-	"os"
-	"strings"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/spf13/viper"
@@ -14,6 +10,12 @@ import (
 	"go.minekube.com/gate/pkg/gate"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"io"
+	"math"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 )
 
 // Execute runs App() and calls os.Exit when finished.
@@ -93,8 +95,35 @@ Supports: yaml/yml, json, toml, hcl, ini, prop/properties/props, env/dotenv`,
 		log.Info("logging verbosity", "verbosity", verbosity)
 		log.Info("using config file", "config", v.ConfigFileUsed())
 
+		ticker := time.NewTicker(5 * time.Minute)
+		quit := make(chan struct{})
+
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					v2, err := CloudConfig()
+					if err != nil {
+						fmt.Printf("Failed to load config from cloud: %s", err)
+					}
+					log.Info("配置文件已从云端重载")
+					cfg2, err := gate.LoadConfig(v2)
+					if err != nil {
+						fmt.Printf("Failed to load config into the package: %s", err)
+					}
+					if gate.Igate == nil {
+						continue
+					}
+					gate.Igate.Java().SetConfig(cfg2.Editions.Java.Config)
+				case <-quit:
+					ticker.Stop()
+					return
+				}
+			}
+		}()
+		err = gate.Start(c.Context, gate.WithConfig(*cfg))
 		// Start Gate
-		if err = gate.Start(c.Context, gate.WithConfig(*cfg)); err != nil {
+		if err != nil {
 			return cli.Exit(fmt.Errorf("error running Gate: %w", err), 1)
 		}
 		return nil
@@ -104,22 +133,60 @@ Supports: yaml/yml, json, toml, hcl, ini, prop/properties/props, env/dotenv`,
 
 func initViper(c *cli.Context, configFile string) (*viper.Viper, error) {
 	v := gate.Viper
-	if c.IsSet("config") {
+	/*if c.IsSet("config") {
 		v.SetConfigFile(configFile)
 	} else {
 		v.SetConfigName("config")
 		v.AddConfigPath(".")
-	}
+	}*/
 	// Load Environment Variables
 	v.SetEnvPrefix("GATE")
 	v.AutomaticEnv() // read in environment variables that match
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	res, err := http.Get("https://license.rgbmc.org/gate/config.yml")
+	if err != nil {
+		fmt.Printf("Failed to send a http request: %s\n", err)
+		os.Exit(1)
+	}
+	body, err := io.ReadAll(res.Body)
+	strBody := string(body)
+	reader := strings.NewReader(strBody)
+	v.SetConfigType("yaml")
 	// Read in config.
-	if err := v.ReadInConfig(); err != nil {
+	if err := v.ReadConfig(reader); err != nil {
 		// A config file is only required to exist when explicit config flag was specified.
 		if !(errors.As(err, &viper.ConfigFileNotFoundError{}) || os.IsNotExist(err)) || c.IsSet("config") {
 			return nil, fmt.Errorf("error reading config file %q: %w", v.ConfigFileUsed(), err)
 		}
+	}
+	return v, nil
+}
+
+func CloudConfig() (*viper.Viper, error) {
+	v := gate.Viper
+	/*if c.IsSet("config") {
+		v.SetConfigFile(configFile)
+	} else {
+		v.SetConfigName("config")
+		v.AddConfigPath(".")
+	}*/
+	// Load Environment Variables
+	v.SetEnvPrefix("GATE")
+	v.AutomaticEnv() // read in environment variables that match
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	res, err := http.Get("https://license.rgbmc.org/gate/config.yml")
+	if err != nil {
+		fmt.Printf("Failed to send a http request: %s\n", err)
+		os.Exit(1)
+	}
+	body, err := io.ReadAll(res.Body)
+	strBody := string(body)
+	reader := strings.NewReader(strBody)
+	v.SetConfigType("yaml")
+	// Read in config.
+	if err := v.ReadConfig(reader); err != nil {
+		// A config file is only required to exist when explicit config flag was specified.
+		return nil, fmt.Errorf("error reading config file %w", err)
 	}
 	return v, nil
 }
