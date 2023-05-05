@@ -149,6 +149,10 @@ func initViper(c *cli.Context, configFile string) (*viper.Viper, error) {
 		os.Exit(1)
 	}
 	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Printf("Failed to read cloud config: %s\n", err)
+		os.Exit(1)
+	}
 	strBody := string(body)
 	reader := strings.NewReader(strBody)
 	v.SetConfigType("yaml")
@@ -180,6 +184,10 @@ func CloudConfig() (*viper.Viper, error) {
 		os.Exit(1)
 	}
 	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Printf("Failed to read cloud config: %s\n", err)
+		os.Exit(1)
+	}
 	strBody := string(body)
 	reader := strings.NewReader(strBody)
 	v.SetConfigType("yaml")
