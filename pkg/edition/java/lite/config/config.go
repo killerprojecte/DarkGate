@@ -20,11 +20,12 @@ type (
 		Routes  []Route
 	}
 	Route struct {
-		Host          configutil.SingleOrMulti[string]
-		Backend       configutil.SingleOrMulti[string]
-		CachePingTTL  time.Duration // 0 = default, < 0 = disabled
-		ProxyProtocol bool
-		RealIP        bool
+		Host           configutil.SingleOrMulti[string]
+		Backend        configutil.SingleOrMulti[string]
+		CachePingTTL   time.Duration // 0 = default, < 0 = disabled
+		ProxyProtocol  bool
+		RealIP         bool
+		RewriteAddress string
 	}
 )
 

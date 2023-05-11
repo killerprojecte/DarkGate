@@ -184,6 +184,12 @@ func dialRoute(
 		handshake.ServerAddress = RealIP(handshake.ServerAddress, srcAddr)
 		forceUpdatePacketContext = true
 	}
+
+	if route.RewriteAddress != "" {
+		handshake.ServerAddress = route.RewriteAddress
+		forceUpdatePacketContext = true
+	}
+
 	if forceUpdatePacketContext {
 		update(pc, handshake)
 	}
