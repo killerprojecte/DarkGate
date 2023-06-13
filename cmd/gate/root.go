@@ -175,18 +175,18 @@ func CloudConfig() (*viper.Viper, error) {
 		v.AddConfigPath(".")
 	}*/
 	// Load Environment Variables
-	v.SetEnvPrefix("GATE")
-	v.AutomaticEnv() // read in environment variables that match
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	res, err := http.Get("https://license.rgbmc.org/gate/config.yml")
 	if err != nil {
 		fmt.Printf("Failed to send a http request: %s\n", err)
-		os.Exit(1)
+		return v, nil
 	}
+	v.SetEnvPrefix("GATE")
+	v.AutomaticEnv() // read in environment variables that match
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Printf("Failed to read cloud config: %s\n", err)
-		os.Exit(1)
+		return v, nil
 	}
 	strBody := string(body)
 	reader := strings.NewReader(strBody)
